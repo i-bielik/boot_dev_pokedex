@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/i-bielik/pokedexcli/internal/pokecache"
 )
 
 const (
@@ -14,12 +16,14 @@ const (
 
 // Client -
 type Client struct {
+	cache      pokecache.Cache
 	httpClient http.Client
 }
 
 // NewClient -
-func NewClient(timeout time.Duration) Client {
+func NewClient(timeout, cacheInterval time.Duration) Client {
 	return Client{
+		cache: pokecache.NewCache(cacheInterval),
 		httpClient: http.Client{
 			Timeout: timeout,
 		},
@@ -44,6 +48,15 @@ func (c *Client) GetLocationAreas(pageURL *string) (LocationAreas, error) {
 		url = *pageURL
 	}
 
+	if cachedData, found := c.cache.Get(url); found {
+		var locations LocationAreas
+		err := json.Unmarshal(cachedData, &locations)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return locations, nil
+	}
+
 	res, err := http.Get(url)
 	if err != nil {
 		log.Fatal(err)
@@ -64,5 +77,6 @@ func (c *Client) GetLocationAreas(pageURL *string) (LocationAreas, error) {
 		log.Fatal(err)
 	}
 
+	c.cache.Add(url, body)
 	return locations, nil
 }
