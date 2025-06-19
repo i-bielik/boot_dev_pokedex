@@ -21,18 +21,18 @@ func cleanInput(text string) []string {
 	return strings.Fields(strings.ToLower(text))
 }
 
-func commandExit(cfg *config) error {
+func commandExit(cfg *config, args ...string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(cfg *config) error {
+func commandHelp(cfg *config, args ...string) error {
 	fmt.Println("Welcome to the Pokedex!\nUsage:\n\nhelp: Displays a help message\nexit: Exit the Pokedex")
 	return nil
 }
 
-func commandMap(cfg *config) error {
+func commandMap(cfg *config, args ...string) error {
 	locations, err := cfg.pokeapiClient.GetLocationAreas(cfg.Next)
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func commandMap(cfg *config) error {
 	return nil
 }
 
-func commandMapb(cfg *config) error {
+func commandMapb(cfg *config, args ...string) error {
 	if cfg.Previous == nil {
 		fmt.Println("you're on the first page")
 		return errors.New("you're on the first page")
@@ -67,10 +67,28 @@ func commandMapb(cfg *config) error {
 	return nil
 }
 
+func commandExplore(cfg *config, args ...string) error {
+	if len(args) == 0 {
+		return errors.New("please provide a location name to explore")
+	}
+	locationName := args[0]
+	location, err := cfg.pokeapiClient.GetLocationArea(locationName)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Exploring %s...\n", locationName)
+	fmt.Println("Found Pokemon:")
+	for _, pokemon := range location.PokemonEncounters {
+		fmt.Println("-", pokemon.Pokemon.Name)
+	}
+	return nil
+}
+
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, ...string) error
 }
 
 func startRepl(cfg *config) {
@@ -95,6 +113,11 @@ func startRepl(cfg *config) {
 			description: "Get previous location areas",
 			callback:    commandMapb,
 		},
+		"explore": {
+			name:        "explore <location name>",
+			description: "Explore Pokemons in given location",
+			callback:    commandExplore,
+		},
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -110,7 +133,7 @@ func startRepl(cfg *config) {
 		commandName := words[0]
 
 		if command, ok := commands[commandName]; ok {
-			command.callback(cfg)
+			command.callback(cfg, words[1:]...)
 		} else {
 			fmt.Println("Unknown command:", commandName)
 		}
