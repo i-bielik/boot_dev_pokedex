@@ -113,3 +113,45 @@ func (c *Client) GetLocationArea(locationName string) (LocationArea, error) {
 	c.cache.Add(url, body)
 	return location, nil
 }
+
+func (c *Client) CatchPokemon(pokemonName string) (Pokemon, error) {
+	// Simulate fetching location areas from an API
+	// In a real implementation, this would involve making an HTTP request to the PokeAPI
+	if pokemonName == "" {
+		return Pokemon{}, errors.New("pokemon name cannot be empty")
+	}
+
+	url := baseURL + "/pokemon/" + pokemonName
+
+	if cachedData, found := c.cache.Get(url); found {
+		var pokemon Pokemon
+		err := json.Unmarshal(cachedData, &pokemon)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return pokemon, nil
+	}
+
+	res, err := http.Get(url)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if res.StatusCode > 299 {
+		log.Fatalf("Response failed with status code: %d", res.StatusCode)
+	}
+
+	body, err := io.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var pokemon Pokemon
+	err = json.Unmarshal(body, &pokemon)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.cache.Add(url, body)
+	return pokemon, nil
+}

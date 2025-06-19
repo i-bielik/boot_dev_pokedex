@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/i-bielik/pokedexcli/internal/pokeapi"
 )
@@ -14,6 +15,7 @@ type config struct {
 	pokeapiClient pokeapi.Client
 	Next          *string `json:"next"`
 	Previous      *string `json:"previous"`
+	pokedex       map[string]pokeapi.Pokemon
 }
 
 func cleanInput(text string) []string {
@@ -85,6 +87,31 @@ func commandExplore(cfg *config, args ...string) error {
 	return nil
 }
 
+func commandCatch(cfg *config, args ...string) error {
+	if len(args) == 0 {
+		return errors.New("please provide a pokemon name to catch")
+	}
+	pokemonName := args[0]
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemonName)
+
+	pokemon, err := cfg.pokeapiClient.CatchPokemon(pokemonName)
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(1 * time.Second) // Add a 1-second delay
+
+	// Simulate catching the Pokemon
+	if pokemon.AttemptCatch() {
+		cfg.pokedex[pokemon.Name] = pokemon
+		fmt.Printf("%s was caught!\n", pokemon.Name)
+	} else {
+		fmt.Printf("%s escaped!\n", pokemon.Name)
+	}
+
+	return nil
+}
+
 type cliCommand struct {
 	name        string
 	description string
@@ -114,9 +141,14 @@ func startRepl(cfg *config) {
 			callback:    commandMapb,
 		},
 		"explore": {
-			name:        "explore <location name>",
+			name:        "explore <location_name>",
 			description: "Explore Pokemons in given location",
 			callback:    commandExplore,
+		},
+		"catch": {
+			name:        "catch <pokemon_name>",
+			description: "Attempt to catch a Pokemon",
+			callback:    commandCatch,
 		},
 	}
 
