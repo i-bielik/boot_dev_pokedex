@@ -112,6 +112,34 @@ func commandCatch(cfg *config, args ...string) error {
 	return nil
 }
 
+func commandInspect(cfg *config, args ...string) error {
+	if len(args) == 0 {
+		fmt.Println("please provide a pokemon name to catch")
+		return errors.New("you must provide a pokemon name")
+	}
+	pokemonName := args[0]
+
+	pokemon, ok := cfg.pokedex[pokemonName]
+	if !ok {
+		fmt.Println("you have not caught that pokemon")
+		return errors.New("you have not caught that pokemon")
+	}
+
+	fmt.Printf("Name: %s\n", pokemon.Name)
+	fmt.Printf("Height: %d\n", pokemon.Height)
+	fmt.Printf("Weight: %d\n", pokemon.Weight)
+	fmt.Println("Stats:")
+	for _, item := range pokemon.Stats {
+		fmt.Printf("  -%s: %d\n", item.Stat.Name, item.BaseStat)
+	}
+	fmt.Println("Types:")
+	for _, item := range pokemon.Types {
+		fmt.Printf("  -%s\n", item.Type.Name)
+	}
+
+	return nil
+}
+
 type cliCommand struct {
 	name        string
 	description string
@@ -149,6 +177,11 @@ func startRepl(cfg *config) {
 			name:        "catch <pokemon_name>",
 			description: "Attempt to catch a Pokemon",
 			callback:    commandCatch,
+		},
+		"inspect": {
+			name:        "inspect <pokemon_name>",
+			description: "Show basic information about a Pokemon",
+			callback:    commandInspect,
 		},
 	}
 
